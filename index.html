@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>列车调饮师 · 巡回特调</title>
+    <style>
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(145deg, #2a5f5c 0%, #1c3f3d 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Quicksand', system-ui, 'Poppins', sans-serif;
+            touch-action: manipulation;
+            padding: 16px;
+        }
+
+        /* 列车车厢风格 */
+        .train-car {
+            max-width: 560px;
+            width: 100%;
+            background: #735e4b;
+            border-radius: 48px 48px 40px 40px;
+            box-shadow: 0 25px 40px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 245, 190, 0.4);
+            overflow: hidden;
+            border: 1px solid #e9c891;
+        }
+
+        /* 车窗区域 (上部) */
+        .window-area {
+            background: #cbd8e6;
+            background-image: repeating-linear-gradient(90deg, #b7cddf22 0px, #b7cddf22 2px, transparent 2px, transparent 8px);
+            padding: 18px 20px 20px;
+            border-bottom: 6px solid #9c7e5c;
+            position: relative;
+            min-height: 260px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .train-window {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            width: 70px;
+            height: 70px;
+            background: #aec9e0;
+            border-radius: 40px 40px 20px 20px;
+            border: 4px solid #f7e5b5;
+            box-shadow: inset 0 0 0 3px #fee3a0, 0 3px 10px rgba(0,0,0,0.2);
+        }
+        .train-window::after {
+            content: "🌲🚂";
+            position: absolute;
+            font-size: 22px;
+            bottom: -20px;
+            right: -10px;
+            opacity: 0.8;
+        }
+
+        .passenger-card {
+            background: rgba(250, 245, 215, 0.96);
+            backdrop-filter: blur(4px);
+            border-radius: 70px;
+            padding: 12px 24px;
+            margin: 10px 0 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 18px;
+            box-shadow: 0 10px 16px rgba(0,0,0,0.2);
+            border: 1px solid #ffefb0;
+        }
+        .passenger-avatar {
+            font-size: 54px;
+            filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.2));
+        }
+        .demand-box {
+            background: white;
+            border-radius: 50px;
+            padding: 6px 22px;
+            text-align: center;
+        }
+        .demand-icon {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2a4f5e;
+        }
+        .demand-cup {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background: #3a86ff;
+            box-shadow: inset 0 1px 3px #b2dcff, 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .status-badge {
+            background: #2d4a46;
+            color: #ffe3a4;
+            border-radius: 40px;
+            padding: 5px 16px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+        .next-hint {
+            font-size: 0.65rem;
+            background: #846e55aa;
+            border-radius: 20px;
+            padding: 4px 12px;
+            color: #fff0cf;
+            margin-top: 6px;
+        }
+
+        /* 下半部分: 托盘 + 老虎机 */
+        .lower-section {
+            background: #4f3a28;
+            background-image: radial-gradient(circle at 10% 20%, #6b4f34 2%, transparent 2.5%);
+            padding: 18px 14px 22px;
+        }
+
+        /* 托盘区 */
+        .tray-area {
+            background: #e7cfb1cc;
+            backdrop-filter: blur(12px);
+            border-radius: 48px;
+            padding: 16px 12px;
+            margin-bottom: 24px;
+            border: 1px solid #fff0cf;
+            box-shadow: inset 0 1px 6px #fff2cf, 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        .tray-title {
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: #2e241d;
+            background: #f7e5cfaa;
+            display: inline-block;
+            width: 100%;
+            border-radius: 40px;
+            padding: 4px;
+            margin-bottom: 14px;
+        }
+        .drinks-tray {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+        }
+        .tray-item {
+            background: #fff3e0;
+            border-radius: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 18px;
+            min-width: 90px;
+            cursor: pointer;
+            transition: 0.08s linear;
+            box-shadow: 0 5px 0 #aa8b64;
+            touch-action: manipulation;
+        }
+        .tray-item:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #aa8b64;
+        }
+        .drink-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            box-shadow: inset 0 0 0 2px rgba(255,255,200,0.8), 0 3px 8px rgba(0,0,0,0.2);
+        }
+        .drink-count {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #4f2c1a;
+            margin-top: 6px;
+        }
+
+        /* 老虎机区域 */
+        .slot-machine {
+            background: #1f1a14;
+            border-radius: 48px;
+            padding: 16px 12px 20px;
+            box-shadow: inset 0 1px 4px #9e8468, 0 12px 20px black;
+            margin-top: 6px;
+        }
+        .slot-window {
+            background: #231f1a;
+            border-radius: 36px;
+            padding: 12px;
+            box-shadow: inset 0 0 0 3px #f7cf8c, inset 0 0 0 6px #3d2a1a;
+        }
+        .reels {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 16px 0;
+        }
+        .reel {
+            background: #fcf3dd;
+            width: 80px;
+            height: 90px;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 58px;
+            box-shadow: inset 0 0 0 3px #e7cba5, 0 6px 0 #836e4e;
+            background: #fff2df;
+        }
+        .spin-lever {
+            display: flex;
+            justify-content: center;
+            margin: 8px 0 12px;
+        }
+        .spin-btn {
+            background: #e0a82b;
+            border: none;
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 12px 32px;
+            border-radius: 60px;
+            color: #2e241a;
+            box-shadow: 0 6px 0 #7a4f1a;
+            cursor: pointer;
+            transition: 0.05s linear;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            touch-action: manipulation;
+        }
+        .spin-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #7a4f1a;
+        }
+        .slot-hint {
+            text-align: center;
+            font-size: 0.65rem;
+            color: #ffe6b3;
+            background: #00000066;
+            border-radius: 30px;
+            width: fit-content;
+            margin: 10px auto 0;
+            padding: 4px 14px;
+        }
+        .spin-counter {
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: bold;
+            background: #2f261e;
+            margin-top: 12px;
+            padding: 6px;
+            border-radius: 60px;
+            color: #ffda99;
+        }
+        .reset-button {
+            background: #b87c4a;
+            border: none;
+            font-weight: bold;
+            padding: 8px 18px;
+            border-radius: 40px;
+            margin-top: 16px;
+            color: #fef0db;
+            font-size: 0.8rem;
+            width: fit-content;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .reset-button:active {
+            transform: scale(0.96);
+        }
+        footer {
+            font-size: 0.6rem;
+            text-align: center;
+            background: #2b241c;
+            color: #cfba9a;
+            padding: 8px;
+        }
+        .celebrate-toast {
+            position: fixed;
+            bottom: 30%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #f7c56e;
+            color: #2c2b26;
+            padding: 10px 22px;
+            border-radius: 60px;
+            font-weight: bold;
+            z-index: 200;
+            box-shadow: 0 4px 12px black;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+<div class="train-car" id="gameApp">
+    <!-- 车窗区域: 动态乘客 (没有固定顾客) -->
+    <div class="window-area">
+        <div class="train-window"></div>
+        <div id="passengerContainer" style="width:100%; display: flex; flex-direction: column; align-items: center;">
+            <!-- 动态乘客卡片 -->
+        </div>
+        <div class="next-hint" id="nextHint">✨ 满足当前乘客需求后，下一位乘客将上车 ✨</div>
+    </div>
+
+    <div class="lower-section">
+        <!-- 饮品托盘区 -->
+        <div class="tray-area">
+            <div class="tray-title">🍽️ 列车饮品台 (点击两杯相同饮品合成)</div>
+            <div class="drinks-tray" id="drinkTray"></div>
+        </div>
+
+        <!-- 老虎机区域 -->
+        <div class="slot-machine">
+            <div class="slot-window">
+                <div class="reels" id="slotReels">
+                    <div class="reel" id="reel1">🍹</div>
+                    <div class="reel" id="reel2">🍹</div>
+                    <div class="reel" id="reel3">🍹</div>
+                </div>
+                <div class="spin-lever">
+                    <button class="spin-btn" id="spinSlotBtn">🎰 拉杆转动 🎰</button>
+                </div>
+                <div class="slot-hint">✨ 三格相同 → 获得对应饮品 ✨<br>🍓50% 🍊25% 🍏15% 💎5%</div>
+                <div class="spin-counter" id="spinCounterDisplay">🎲 剩余转动次数: 40 / 40</div>
+            </div>
+            <div style="display: flex; justify-content: center; margin-top: 12px;">
+                <button class="reset-button" id="resetBtn">🔄 重新发车</button>
+            </div>
+        </div>
+    </div>
+    <footer>🚂 列车调饮师 · 满足旅客的饮品愿望，换取新挑战</footer>
+</div>
+
+<script>
+    // ========== 游戏核心 ==========
+    const MAX_SPINS = 40;
+    let remainingSpins = 40;
+    let pendingMerge = null;
+
+    // 饮品库存 (红🍓 橙🍊 绿🍏 蓝💎)
+    let inventory = {
+        red: 2,
+        orange: 0,
+        green: 0,
+        blue: 0
+    };
+
+    // 当前乘客需求 (饮品类型)
+    let currentDemand = null;      // 'red', 'orange', 'green', 'blue'
+    let currentPassengerId = 0;
+    
+    // 饮品视觉映射
+    const drinkVisual = {
+        red:    { icon: '🍓', bgGradient: 'linear-gradient(145deg, #e74c3c, #c0392b)', name: '草莓特饮' },
+        orange: { icon: '🍊', bgGradient: 'linear-gradient(145deg, #f39c12, #e67e22)', name: '橙子特饮' },
+        green:  { icon: '🍏', bgGradient: 'linear-gradient(145deg, #2ecc71, #27ae60)', name: '苹果特饮' },
+        blue:   { icon: '💎', bgGradient: 'linear-gradient(145deg, #3498db, #2980b9)', name: '钻石冰蓝' }
+    };
+
+    // 合成映射
+    const combineMap = {
+        red:    { need: 2, result: 'orange' },
+        orange: { need: 2, result: 'green' },
+        green:  { need: 2, result: 'blue' }
+    };
+
+    // 老虎机奖励概率 (草莓50% 橙子25% 苹果15% 钻石5%)
+    const rewardProbabilities = [
+        { type: 'red',    weight: 50, icon: '🍓' },
+        { type: 'orange', weight: 25, icon: '🍊' },
+        { type: 'green',  weight: 15, icon: '🍏' },
+        { type: 'blue',   weight: 5,  icon: '💎' }
+    ];
+
+    const slotSymbols = [
+        { icon: '🍓', type: 'red' },
+        { icon: '🍊', type: 'orange' },
+        { icon: '🍏', type: 'green' },
+        { icon: '💎', type: 'blue' }
+    ];
+
+    let currentReelValues = ['🍹', '🍹', '🍹'];
+    const reelEls = {
+        0: document.getElementById('reel1'),
+        1: document.getElementById('reel2'),
+        2: document.getElementById('reel3')
+    };
+
+    // ----- 辅助函数 -----
+    function getRandomRewardType() {
+        const totalWeight = rewardProbabilities.reduce((sum, p) => sum + p.weight, 0);
+        let random = Math.random() * totalWeight;
+        let acc = 0;
+        for (const prob of rewardProbabilities) {
+            acc += prob.weight;
+            if (random <= acc) return prob.type;
+        }
+        return 'red';
+    }
+
+    function getIconByType(type) {
+        const found = slotSymbols.find(s => s.type === type);
+        return found ? found.icon : '🍓';
+    }
+
+    // 随机生成新的乘客需求 (不重复当前需求？可以重复但无所谓，完全随机)
+    function generateRandomDemand() {
+        const types = ['red', 'orange', 'green', 'blue'];
+        const randomIndex = Math.floor(Math.random() * types.length);
+        return types[randomIndex];
+    }
+
+    // 刷新乘客UI
+    function refreshPassenger() {
+        const container = document.getElementById('passengerContainer');
+        if (!container) return;
+        if (!currentDemand) {
+            currentDemand = generateRandomDemand();
+        }
+        const demandType = currentDemand;
+        const visual = drinkVisual[demandType];
+        // 随机乘客形象
+        const passengerIcons = ['🧑‍🎒', '👵👒', '🧳👓', '🐱🚂', '🧑‍🍼', '🎒🧢'];
+        const randomAvatar = passengerIcons[Math.floor(Math.random() * passengerIcons.length)];
+        container.innerHTML = `
+            <div class="passenger-card">
+                <div class="passenger-avatar">${randomAvatar}</div>
+                <div class="demand-box">
+                    <div class="demand-icon">
+                        <span>🚂 想要一杯</span>
+                        <div style="width:32px;height:32px;border-radius:50%;background:${visual.bgGradient};display:inline-flex;align-items:center;justify-content:center;font-size:20px;">${visual.icon}</div>
+                        <span>${visual.name}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="status-badge" id="demandStatusMsg">🎫 请调配 ${visual.icon} 饮品送给旅客</div>
+        `;
+    }
+
+    // 满足当前乘客需求，更换新乘客，并给予额外奖励(恢复1次转动次数作为鼓励)
+    function satisfyCurrentPassenger() {
+        if (!currentDemand) return false;
+        const needed = currentDemand;
+        if (inventory[needed] > 0) {
+            // 扣除所需饮品
+            inventory[needed] -= 1;
+            // 更换新乘客
+            currentDemand = generateRandomDemand();
+            refreshPassenger();
+            renderTray();
+            // 额外奖励：增加1次老虎机转动次数（不超过最大40）
+            if (remainingSpins < MAX_SPINS) {
+                remainingSpins = Math.min(remainingSpins + 1, MAX_SPINS);
+                updateSpinCounterUI();
+                showFloatingTip(`🎉 旅客很满意！获得 +1 次老虎机机会 🎉`, 1500);
+            } else {
+                showFloatingTip(`🎉 饮品送达！旅客很开心 🎉`, 1200);
+            }
+            // 额外检查: 如果满足需求后蓝色还在？无需特殊
+            return true;
+        } else {
+            showFloatingTip(`❌ 库存中没有 ${drinkVisual[needed].icon}，先合成或转动老虎机吧`, 1300);
+            return false;
+        }
+    }
+
+    // 更新托盘UI
+    function renderTray() {
+        const container = document.getElementById('drinkTray');
+        if (!container) return;
+        const order = ['red', 'orange', 'green', 'blue'];
+        container.innerHTML = '';
+        for (let key of order) {
+            const count = inventory[key];
+            const visual = drinkVisual[key];
+            const card = document.createElement('div');
+            card.className = 'tray-item';
+            card.setAttribute('data-type', key);
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'drink-icon';
+            iconDiv.style.background = visual.bgGradient;
+            iconDiv.style.display = 'flex';
+            iconDiv.style.alignItems = 'center';
+            iconDiv.style.justifyContent = 'center';
+            iconDiv.innerHTML = `<span style="font-size:34px;">${visual.icon}</span>`;
+            const countSpan = document.createElement('div');
+            countSpan.className = 'drink-count';
+            countSpan.innerText = count;
+            if (count === 0) {
+                card.style.opacity = '0.5';
+                card.style.filter = 'grayscale(0.2)';
+            } else {
+                card.style.opacity = '1';
+                card.style.filter = 'none';
+            }
+            card.appendChild(iconDiv);
+            card.appendChild(countSpan);
+            container.appendChild(card);
+        }
+        // 重新绑定点击事件
+        document.querySelectorAll('.tray-item').forEach(el => {
+            el.removeEventListener('click', trayClickHandler);
+            el.addEventListener('click', trayClickHandler);
+        });
+        // 额外高亮当前需求
+        const statusDiv = document.getElementById('demandStatusMsg');
+        if (statusDiv && currentDemand) {
+            statusDiv.innerHTML = `🎫 当前需要 ${drinkVisual[currentDemand].icon} ${drinkVisual[currentDemand].name}`;
+        }
+    }
+
+    // 托盘点击: 合成或交付乘客 (蓝色直接满足需求? 不，蓝色也是饮品，交付逻辑统一走需求)
+    function trayClickHandler(e) {
+        const card = e.currentTarget;
+        const type = card.getAttribute('data-type');
+        if (!type) return;
+        
+        // 特殊逻辑：如果点击的饮品正好是当前乘客需求，则交付给乘客
+        if (currentDemand === type && inventory[type] > 0) {
+            satisfyCurrentPassenger();
+            return;
+        }
+        
+        // 如果不是需求，执行合成逻辑 (红色/橙色/绿色)
+        if (!['red', 'orange', 'green'].includes(type)) {
+            if (type === 'blue' && currentDemand !== 'blue') {
+                showFloatingTip(`🧃 当前乘客不需要蓝色饮品，看看乘客需求吧`, 1000);
+            } else if (type === 'blue' && currentDemand === 'blue' && inventory.blue > 0) {
+                satisfyCurrentPassenger(); // 上面未拦截再次保证
+            }
+            return;
+        }
+        
+        if (inventory[type] <= 0) {
+            showFloatingTip(`🧃 没有${drinkVisual[type].icon}饮品了，去老虎机试试`, 1000);
+            pendingMerge = null;
+            return;
+        }
+        
+        if (pendingMerge === null) {
+            pendingMerge = { type: type };
+            showFloatingTip(`✨ 选中 ${drinkVisual[type].icon}，再点击相同的一杯合成 ✨`, 1200);
+            return;
+        }
+        
+        if (pendingMerge.type !== type) {
+            showFloatingTip(`❌ 需要两杯相同的饮品才能合成！已取消`, 1000);
+            pendingMerge = null;
+            return;
+        }
+        
+        if (inventory[type] >= 2) {
+            const rule = combineMap[type];
+            if (rule && rule.result) {
+                inventory[type] -= 2;
+                const resultType = rule.result;
+                inventory[resultType] += 1;
+                showFloatingTip(`✨ 合成成功！获得 ${drinkVisual[resultType].icon} ✨`, 1100);
+                pendingMerge = null;
+                renderTray();
+                if (resultType === currentDemand && inventory[resultType] > 0) {
+                    showFloatingTip(`💡 刚刚合成的饮品正好是乘客需要的！点击托盘饮品可交付`, 1600);
+                }
+            } else {
+                pendingMerge = null;
+            }
+        } else {
+            showFloatingTip(`⚠️ 至少需要两杯 ${drinkVisual[type].icon} 才能合成`, 1000);
+            pendingMerge = null;
+        }
+    }
+    
+    // 老虎机转动 (三格相同中奖，按概率获得饮品)
+    function spinSlotMachine() {
+        if (remainingSpins <= 0) {
+            showFloatingTip('⚠️ 老虎机次数已用完！点击重新发车继续旅程', 1800);
+            return;
+        }
+        const spinBtn = document.getElementById('spinSlotBtn');
+        if (spinBtn) spinBtn.disabled = true;
+        remainingSpins--;
+        updateSpinCounterUI();
+        
+        const rewardType = getRandomRewardType();
+        const rewardIcon = getIconByType(rewardType);
+        
+        let count = 0;
+        const maxIter = 12;
+        const interval = setInterval(() => {
+            for (let i = 0; i < 3; i++) {
+                const randIdx = Math.floor(Math.random() * slotSymbols.length);
+                currentReelValues[i] = slotSymbols[randIdx].icon;
+            }
+            updateSlotUI();
+            count++;
+            if (count >= maxIter) {
+                clearInterval(interval);
+                for (let i = 0; i < 3; i++) currentReelValues[i] = rewardIcon;
+                updateSlotUI();
+                inventory[rewardType] += 1;
+                renderTray();
+                const rewardName = drinkVisual[rewardType].name;
+                showFloatingTip(`🎰 老虎机中奖！获得 ${rewardIcon} ${rewardName} +1 🎉`, 1600);
+                if (rewardType === currentDemand) {
+                    showFloatingTip(`🎯 正好是乘客需要的！点击托盘饮品即可交付`, 1800);
+                }
+                if (remainingSpins === 0) {
+                    showFloatingTip(`⛽ 老虎机次数归零，可通过满足乘客需求获得额外次数`, 2000);
+                }
+                if (spinBtn) spinBtn.disabled = false;
+            }
+        }, 70);
+    }
+    
+    function updateSlotUI() {
+        if (reelEls[0]) reelEls[0].innerText = currentReelValues[0];
+        if (reelEls[1]) reelEls[1].innerText = currentReelValues[1];
+        if (reelEls[2]) reelEls[2].innerText = currentReelValues[2];
+    }
+    
+    function updateSpinCounterUI() {
+        const counterDiv = document.getElementById('spinCounterDisplay');
+        if (counterDiv) {
+            counterDiv.innerHTML = `🎲 剩余转动次数: ${remainingSpins} / ${MAX_SPINS}`;
+            if (remainingSpins === 0) {
+                counterDiv.style.background = '#691c0c';
+            } else {
+                counterDiv.style.background = '#2f261e';
+            }
+        }
+    }
+    
+    // 重置整个列车旅程
+    function resetGame() {
+        inventory = {
+            red: 2,
+            orange: 0,
+            green: 0,
+            blue: 0
+        };
+        remainingSpins = MAX_SPINS;
+        pendingMerge = null;
+        currentDemand = generateRandomDemand();
+        currentReelValues = ['🍹', '🍹', '🍹'];
+        updateSlotUI();
+        renderTray();
+        refreshPassenger();
+        updateSpinCounterUI();
+        showFloatingTip('🚆 列车重新出发！满足旅客愿望，获取新乘客', 2000);
+    }
+    
+    function showFloatingTip(msg, duration) {
+        let tip = document.getElementById('dynamicTip');
+        if (!tip) {
+            tip = document.createElement('div');
+            tip.id = 'dynamicTip';
+            tip.style.position = 'fixed';
+            tip.style.bottom = '35%';
+            tip.style.left = '50%';
+            tip.style.transform = 'translateX(-50%)';
+            tip.style.backgroundColor = '#1f2a1be6';
+            tip.style.color = '#fff3cf';
+            tip.style.padding = '8px 20px';
+            tip.style.borderRadius = '60px';
+            tip.style.fontWeight = 'bold';
+            tip.style.fontSize = '0.85rem';
+            tip.style.zIndex = '999';
+            tip.style.backdropFilter = 'blur(8px)';
+            tip.style.whiteSpace = 'nowrap';
+            tip.style.pointerEvents = 'none';
+            document.body.appendChild(tip);
+        }
+        tip.innerText = msg;
+        tip.style.opacity = '1';
+        if (window.tipTimeout) clearTimeout(window.tipTimeout);
+        window.tipTimeout = setTimeout(() => {
+            if (tip) tip.style.opacity = '0';
+        }, duration);
+    }
+    
+    function bindEvents() {
+        const spinBtn = document.getElementById('spinSlotBtn');
+        if (spinBtn) spinBtn.addEventListener('click', spinSlotMachine);
+        const resetBtn = document.getElementById('resetBtn');
+        if (resetBtn) resetBtn.addEventListener('click', () => resetGame());
+    }
+    
+    function init() {
+        inventory = { red: 2, orange: 0, green: 0, blue: 0 };
+        remainingSpins = MAX_SPINS;
+        pendingMerge = null;
+        currentDemand = generateRandomDemand();
+        currentReelValues = ['🍹', '🍹', '🍹'];
+        updateSlotUI();
+        renderTray();
+        refreshPassenger();
+        updateSpinCounterUI();
+        bindEvents();
+    }
+    init();
+</script>
+</body>
+</html>
