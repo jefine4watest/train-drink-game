@@ -23,7 +23,6 @@
             padding: 16px;
         }
 
-        /* 列车车厢风格 */
         .train-car {
             max-width: 560px;
             width: 100%;
@@ -34,7 +33,6 @@
             border: 1px solid #e9c891;
         }
 
-        /* 车窗区域 (上部) */
         .window-area {
             background: #cbd8e6;
             background-image: repeating-linear-gradient(90deg, #b7cddf22 0px, #b7cddf22 2px, transparent 2px, transparent 8px);
@@ -123,14 +121,12 @@
             margin-top: 6px;
         }
 
-        /* 下半部分: 托盘 + 老虎机 */
         .lower-section {
             background: #4f3a28;
             background-image: radial-gradient(circle at 10% 20%, #6b4f34 2%, transparent 2.5%);
             padding: 18px 14px 22px;
         }
 
-        /* 托盘区 */
         .tray-area {
             background: #e7cfb1cc;
             backdrop-filter: blur(12px);
@@ -194,7 +190,6 @@
             margin-top: 6px;
         }
 
-        /* 老虎机区域 */
         .slot-machine {
             background: #1f1a14;
             border-radius: 48px;
@@ -294,45 +289,25 @@
             color: #cfba9a;
             padding: 8px;
         }
-        .celebrate-toast {
-            position: fixed;
-            bottom: 30%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #f7c56e;
-            color: #2c2b26;
-            padding: 10px 22px;
-            border-radius: 60px;
-            font-weight: bold;
-            z-index: 200;
-            box-shadow: 0 4px 12px black;
-            pointer-events: none;
-            white-space: nowrap;
-        }
     </style>
 </head>
 <body>
 <div class="train-car" id="gameApp">
-    <!-- 车窗区域: 动态乘客 (没有固定顾客) -->
     <div class="window-area">
         <div class="train-window"></div>
-        <div id="passengerContainer" style="width:100%; display: flex; flex-direction: column; align-items: center;">
-            <!-- 动态乘客卡片 -->
-        </div>
-        <div class="next-hint" id="nextHint">✨ 满足当前乘客需求后，下一位乘客将上车 ✨</div>
+        <div id="passengerContainer" style="width:100%; display: flex; flex-direction: column; align-items: center;"></div>
+        <div class="next-hint">✨ 满足当前乘客需求后，下一位乘客将上车 ✨</div>
     </div>
 
     <div class="lower-section">
-        <!-- 饮品托盘区 -->
         <div class="tray-area">
             <div class="tray-title">🍽️ 列车饮品台 (点击两杯相同饮品合成)</div>
             <div class="drinks-tray" id="drinkTray"></div>
         </div>
 
-        <!-- 老虎机区域 -->
         <div class="slot-machine">
             <div class="slot-window">
-                <div class="reels" id="slotReels">
+                <div class="reels">
                     <div class="reel" id="reel1">🍹</div>
                     <div class="reel" id="reel2">🍹</div>
                     <div class="reel" id="reel3">🍹</div>
@@ -352,24 +327,13 @@
 </div>
 
 <script>
-    // ========== 游戏核心 ==========
     const MAX_SPINS = 40;
     let remainingSpins = 40;
     let pendingMerge = null;
 
-    // 饮品库存 (红🍓 橙🍊 绿🍏 蓝💎)
-    let inventory = {
-        red: 2,
-        orange: 0,
-        green: 0,
-        blue: 0
-    };
+    let inventory = { red: 2, orange: 0, green: 0, blue: 0 };
+    let currentDemand = null;
 
-    // 当前乘客需求 (饮品类型)
-    let currentDemand = null;      // 'red', 'orange', 'green', 'blue'
-    let currentPassengerId = 0;
-    
-    // 饮品视觉映射
     const drinkVisual = {
         red:    { icon: '🍓', bgGradient: 'linear-gradient(145deg, #e74c3c, #c0392b)', name: '草莓特饮' },
         orange: { icon: '🍊', bgGradient: 'linear-gradient(145deg, #f39c12, #e67e22)', name: '橙子特饮' },
@@ -377,14 +341,12 @@
         blue:   { icon: '💎', bgGradient: 'linear-gradient(145deg, #3498db, #2980b9)', name: '钻石冰蓝' }
     };
 
-    // 合成映射
     const combineMap = {
         red:    { need: 2, result: 'orange' },
         orange: { need: 2, result: 'green' },
         green:  { need: 2, result: 'blue' }
     };
 
-    // 老虎机奖励概率 (草莓50% 橙子25% 苹果15% 钻石5%)
     const rewardProbabilities = [
         { type: 'red',    weight: 50, icon: '🍓' },
         { type: 'orange', weight: 25, icon: '🍊' },
@@ -400,13 +362,7 @@
     ];
 
     let currentReelValues = ['🍹', '🍹', '🍹'];
-    const reelEls = {
-        0: document.getElementById('reel1'),
-        1: document.getElementById('reel2'),
-        2: document.getElementById('reel3')
-    };
 
-    // ----- 辅助函数 -----
     function getRandomRewardType() {
         const totalWeight = rewardProbabilities.reduce((sum, p) => sum + p.weight, 0);
         let random = Math.random() * totalWeight;
@@ -423,23 +379,45 @@
         return found ? found.icon : '🍓';
     }
 
-    // 随机生成新的乘客需求 (不重复当前需求？可以重复但无所谓，完全随机)
     function generateRandomDemand() {
         const types = ['red', 'orange', 'green', 'blue'];
-        const randomIndex = Math.floor(Math.random() * types.length);
-        return types[randomIndex];
+        return types[Math.floor(Math.random() * types.length)];
     }
 
-    // 刷新乘客UI
+    function showFloatingTip(msg, duration) {
+        let tip = document.getElementById('dynamicTip');
+        if (!tip) {
+            tip = document.createElement('div');
+            tip.id = 'dynamicTip';
+            tip.style.position = 'fixed';
+            tip.style.bottom = '35%';
+            tip.style.left = '50%';
+            tip.style.transform = 'translateX(-50%)';
+            tip.style.backgroundColor = '#1f2a1be6';
+            tip.style.color = '#fff3cf';
+            tip.style.padding = '8px 20px';
+            tip.style.borderRadius = '60px';
+            tip.style.fontWeight = 'bold';
+            tip.style.fontSize = '0.85rem';
+            tip.style.zIndex = '999';
+            tip.style.backdropFilter = 'blur(8px)';
+            tip.style.whiteSpace = 'nowrap';
+            tip.style.pointerEvents = 'none';
+            document.body.appendChild(tip);
+        }
+        tip.innerText = msg;
+        tip.style.opacity = '1';
+        if (window.tipTimeout) clearTimeout(window.tipTimeout);
+        window.tipTimeout = setTimeout(() => {
+            if (tip) tip.style.opacity = '0';
+        }, duration);
+    }
+
     function refreshPassenger() {
         const container = document.getElementById('passengerContainer');
         if (!container) return;
-        if (!currentDemand) {
-            currentDemand = generateRandomDemand();
-        }
-        const demandType = currentDemand;
-        const visual = drinkVisual[demandType];
-        // 随机乘客形象
+        if (!currentDemand) currentDemand = generateRandomDemand();
+        const visual = drinkVisual[currentDemand];
         const passengerIcons = ['🧑‍🎒', '👵👒', '🧳👓', '🐱🚂', '🧑‍🍼', '🎒🧢'];
         const randomAvatar = passengerIcons[Math.floor(Math.random() * passengerIcons.length)];
         container.innerHTML = `
@@ -457,18 +435,14 @@
         `;
     }
 
-    // 满足当前乘客需求，更换新乘客，并给予额外奖励(恢复1次转动次数作为鼓励)
     function satisfyCurrentPassenger() {
         if (!currentDemand) return false;
         const needed = currentDemand;
         if (inventory[needed] > 0) {
-            // 扣除所需饮品
             inventory[needed] -= 1;
-            // 更换新乘客
             currentDemand = generateRandomDemand();
             refreshPassenger();
             renderTray();
-            // 额外奖励：增加1次老虎机转动次数（不超过最大40）
             if (remainingSpins < MAX_SPINS) {
                 remainingSpins = Math.min(remainingSpins + 1, MAX_SPINS);
                 updateSpinCounterUI();
@@ -476,7 +450,6 @@
             } else {
                 showFloatingTip(`🎉 饮品送达！旅客很开心 🎉`, 1200);
             }
-            // 额外检查: 如果满足需求后蓝色还在？无需特殊
             return true;
         } else {
             showFloatingTip(`❌ 库存中没有 ${drinkVisual[needed].icon}，先合成或转动老虎机吧`, 1300);
@@ -484,7 +457,6 @@
         }
     }
 
-    // 更新托盘UI
     function renderTray() {
         const container = document.getElementById('drinkTray');
         if (!container) return;
@@ -499,9 +471,6 @@
             const iconDiv = document.createElement('div');
             iconDiv.className = 'drink-icon';
             iconDiv.style.background = visual.bgGradient;
-            iconDiv.style.display = 'flex';
-            iconDiv.style.alignItems = 'center';
-            iconDiv.style.justifyContent = 'center';
             iconDiv.innerHTML = `<span style="font-size:34px;">${visual.icon}</span>`;
             const countSpan = document.createElement('div');
             countSpan.className = 'drink-count';
@@ -517,36 +486,29 @@
             card.appendChild(countSpan);
             container.appendChild(card);
         }
-        // 重新绑定点击事件
         document.querySelectorAll('.tray-item').forEach(el => {
             el.removeEventListener('click', trayClickHandler);
             el.addEventListener('click', trayClickHandler);
         });
-        // 额外高亮当前需求
         const statusDiv = document.getElementById('demandStatusMsg');
         if (statusDiv && currentDemand) {
             statusDiv.innerHTML = `🎫 当前需要 ${drinkVisual[currentDemand].icon} ${drinkVisual[currentDemand].name}`;
         }
     }
 
-    // 托盘点击: 合成或交付乘客 (蓝色直接满足需求? 不，蓝色也是饮品，交付逻辑统一走需求)
     function trayClickHandler(e) {
         const card = e.currentTarget;
         const type = card.getAttribute('data-type');
         if (!type) return;
         
-        // 特殊逻辑：如果点击的饮品正好是当前乘客需求，则交付给乘客
         if (currentDemand === type && inventory[type] > 0) {
             satisfyCurrentPassenger();
             return;
         }
         
-        // 如果不是需求，执行合成逻辑 (红色/橙色/绿色)
         if (!['red', 'orange', 'green'].includes(type)) {
             if (type === 'blue' && currentDemand !== 'blue') {
-                showFloatingTip(`🧃 当前乘客不需要蓝色饮品，看看乘客需求吧`, 1000);
-            } else if (type === 'blue' && currentDemand === 'blue' && inventory.blue > 0) {
-                satisfyCurrentPassenger(); // 上面未拦截再次保证
+                showFloatingTip(`🧃 当前乘客不需要蓝色饮品`, 1000);
             }
             return;
         }
@@ -589,8 +551,24 @@
             pendingMerge = null;
         }
     }
-    
-    // 老虎机转动 (三格相同中奖，按概率获得饮品)
+
+    function updateSlotUI() {
+        const reel1 = document.getElementById('reel1');
+        const reel2 = document.getElementById('reel2');
+        const reel3 = document.getElementById('reel3');
+        if (reel1) reel1.innerText = currentReelValues[0];
+        if (reel2) reel2.innerText = currentReelValues[1];
+        if (reel3) reel3.innerText = currentReelValues[2];
+    }
+
+    function updateSpinCounterUI() {
+        const counterDiv = document.getElementById('spinCounterDisplay');
+        if (counterDiv) {
+            counterDiv.innerHTML = `🎲 剩余转动次数: ${remainingSpins} / ${MAX_SPINS}`;
+            counterDiv.style.background = remainingSpins === 0 ? '#691c0c' : '#2f261e';
+        }
+    }
+
     function spinSlotMachine() {
         if (remainingSpins <= 0) {
             showFloatingTip('⚠️ 老虎机次数已用完！点击重新发车继续旅程', 1800);
@@ -619,8 +597,7 @@
                 updateSlotUI();
                 inventory[rewardType] += 1;
                 renderTray();
-                const rewardName = drinkVisual[rewardType].name;
-                showFloatingTip(`🎰 老虎机中奖！获得 ${rewardIcon} ${rewardName} +1 🎉`, 1600);
+                showFloatingTip(`🎰 老虎机中奖！获得 ${rewardIcon} ${drinkVisual[rewardType].name} +1 🎉`, 1600);
                 if (rewardType === currentDemand) {
                     showFloatingTip(`🎯 正好是乘客需要的！点击托盘饮品即可交付`, 1800);
                 }
@@ -631,33 +608,9 @@
             }
         }, 70);
     }
-    
-    function updateSlotUI() {
-        if (reelEls[0]) reelEls[0].innerText = currentReelValues[0];
-        if (reelEls[1]) reelEls[1].innerText = currentReelValues[1];
-        if (reelEls[2]) reelEls[2].innerText = currentReelValues[2];
-    }
-    
-    function updateSpinCounterUI() {
-        const counterDiv = document.getElementById('spinCounterDisplay');
-        if (counterDiv) {
-            counterDiv.innerHTML = `🎲 剩余转动次数: ${remainingSpins} / ${MAX_SPINS}`;
-            if (remainingSpins === 0) {
-                counterDiv.style.background = '#691c0c';
-            } else {
-                counterDiv.style.background = '#2f261e';
-            }
-        }
-    }
-    
-    // 重置整个列车旅程
+
     function resetGame() {
-        inventory = {
-            red: 2,
-            orange: 0,
-            green: 0,
-            blue: 0
-        };
+        inventory = { red: 2, orange: 0, green: 0, blue: 0 };
         remainingSpins = MAX_SPINS;
         pendingMerge = null;
         currentDemand = generateRandomDemand();
@@ -668,47 +621,15 @@
         updateSpinCounterUI();
         showFloatingTip('🚆 列车重新出发！满足旅客愿望，获取新乘客', 2000);
     }
-    
-    function showFloatingTip(msg, duration) {
-        let tip = document.getElementById('dynamicTip');
-        if (!tip) {
-            tip = document.createElement('div');
-            tip.id = 'dynamicTip';
-            tip.style.position = 'fixed';
-            tip.style.bottom = '35%';
-            tip.style.left = '50%';
-            tip.style.transform = 'translateX(-50%)';
-            tip.style.backgroundColor = '#1f2a1be6';
-            tip.style.color = '#fff3cf';
-            tip.style.padding = '8px 20px';
-            tip.style.borderRadius = '60px';
-            tip.style.fontWeight = 'bold';
-            tip.style.fontSize = '0.85rem';
-            tip.style.zIndex = '999';
-            tip.style.backdropFilter = 'blur(8px)';
-            tip.style.whiteSpace = 'nowrap';
-            tip.style.pointerEvents = 'none';
-            document.body.appendChild(tip);
-        }
-        tip.innerText = msg;
-        tip.style.opacity = '1';
-        if (window.tipTimeout) clearTimeout(window.tipTimeout);
-        window.tipTimeout = setTimeout(() => {
-            if (tip) tip.style.opacity = '0';
-        }, duration);
-    }
-    
+
     function bindEvents() {
         const spinBtn = document.getElementById('spinSlotBtn');
         if (spinBtn) spinBtn.addEventListener('click', spinSlotMachine);
         const resetBtn = document.getElementById('resetBtn');
         if (resetBtn) resetBtn.addEventListener('click', () => resetGame());
     }
-    
+
     function init() {
-        inventory = { red: 2, orange: 0, green: 0, blue: 0 };
-        remainingSpins = MAX_SPINS;
-        pendingMerge = null;
         currentDemand = generateRandomDemand();
         currentReelValues = ['🍹', '🍹', '🍹'];
         updateSlotUI();
